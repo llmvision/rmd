@@ -2,10 +2,12 @@ use crate::code_highlighter::BoundedCodeHighlighter;
 use crate::slash_palette::{SlashCommandSpec, filter_slash_commands};
 use crate::theme::VellumTheme;
 use gpui::{
-    AnyElement, App, Bounds, ClipboardItem, Context, Entity, EntityInputHandler, FocusHandle,
-    Focusable, FontStyle, FontWeight, HighlightStyle, InteractiveElement, IntoElement,
-    ListAlignment, ListState, MouseButton, ParentElement, Pixels, Point, Render, SharedString,
-    StrikethroughStyle, Styled, StyledText, UTF16Selection, UnderlineStyle, Window, div, list, px,
+    AnyElement, App, Bounds, ClipboardItem, Context, ElementInputHandler, Entity,
+    EntityInputHandler, FocusHandle, Focusable, FontStyle, FontWeight, HighlightStyle,
+    InteractiveElement, IntoElement, ListAlignment, ListState, MouseButton, ParentElement, Pixels,
+    Point, Render, SharedString, StatefulInteractiveElement, StrikethroughStyle, Styled,
+    StyledText, UTF16Selection, UnderlineStyle, Window, canvas, div, list, prelude::FluentBuilder,
+    px,
 };
 use std::ops::Range;
 use vellum_core::{
@@ -476,7 +478,7 @@ impl WysiwygEditorSurface {
                 click_entity.update(cx, |this, cx| {
                     this.cursor_byte = click_byte;
                     this.selection_bytes = click_byte..click_byte;
-                    window.focus(&this.focus_handle);
+                    window.focus(&this.focus_handle, cx);
                     cx.notify();
                 });
             })
@@ -697,10 +699,26 @@ impl Render for WysiwygEditorSurface {
             .map(filter_slash_commands)
             .unwrap_or_default();
 
+        let focus_for_ime = self.focus_handle.clone();
+        let entity_for_ime = entity.clone();
+
         div()
             .size_full()
             .relative()
             .track_focus(&self.focus_handle)
+            .child(
+                canvas(
+                    |_, _, _| (),
+                    move |bounds, (), window, cx| {
+                        window.handle_input(
+                            &focus_for_ime,
+                            ElementInputHandler::new(bounds, entity_for_ime),
+                            cx,
+                        );
+                    },
+                )
+                .size_0(),
+            )
             .child(
                 list(self.list_state.clone(), move |ix, _win, cx| {
                     let ent = entity.clone();

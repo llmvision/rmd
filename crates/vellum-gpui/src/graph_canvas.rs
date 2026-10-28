@@ -1,7 +1,8 @@
 use crate::theme::VellumTheme;
 use gpui::{
     App, Context, FocusHandle, Focusable, InteractiveElement, IntoElement, MouseButton,
-    ParentElement, Render, SharedString, Styled, Window, div, px,
+    ParentElement, Render, SharedString, StatefulInteractiveElement, Styled, Window, div,
+    prelude::FluentBuilder, px,
 };
 use vellum_core::knowledge_graph::{GraphNode, KnowledgeGraphSnapshot, ReferenceKind};
 

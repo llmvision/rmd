@@ -152,9 +152,9 @@ pub fn parse_inline_spans(block_text: &str) -> Vec<InlineSpan> {
             Event::Start(Tag::Image { dest_url, .. }) => {
                 stack.push((InlineStyleKind::Image, range.start, Some(dest_url.to_string())))
             }
-            Event::End(TagEnd) => {
+            Event::End(tag_end) => {
                 let matched = matches!(
-                    TagEnd,
+                    tag_end,
                     pulldown_cmark::TagEnd::Strong
                         | pulldown_cmark::TagEnd::Emphasis
                         | pulldown_cmark::TagEnd::Strikethrough

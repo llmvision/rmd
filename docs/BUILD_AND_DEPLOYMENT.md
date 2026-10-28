@@ -398,3 +398,7 @@ server {
      ```toml
      rfd = { version = "0.15", default-features = false, features = ["xdg-portal", "async-std"] }
      ```
+7. **旧版源码包编译 `vellum-core` / `vellum-gpui` 遇到 `f32: Eq` (`VisibleBlockRange`) 或 `gpui 0.2.2` `window.focus` 参数不匹配**
+   - **原因**：`VisibleBlockRange` 包含 `f32` 像素高度字段，浮点数遵循 IEEE 754 `NaN != NaN` 仅实现 `PartialEq` 而不实现 `Eq`；此外 `gpui 0.2.2` 中 `Window::focus(&FocusHandle, &mut App)` 需要传入第二个上下文参数 `cx`，且 `.when()` / `.hover()` 需要引入 `FluentBuilder` 与 `StatefulInteractiveElement`。
+   - **解决**：最新源码树与 `setup-vellum-rust-gpui.sh` 已全部修复，重新下载执行自解压脚本覆盖源码文件（不会清理 `target/` 缓存）后直接运行 `cargo build --release -p vellum-gpui` 即可。
+

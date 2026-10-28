@@ -599,7 +599,7 @@ async function ensureWorkspaceInitialized(): Promise<void> {
   }
 
   // Sync source-tree `docs/BUILD_AND_DEPLOYMENT.md` & `docs/ARCHITECTURE_AND_API.md` into workspace-docs
-  const docsMarker = path.join(WORKSPACE_DIR, '.seed-docs-v7');
+  const docsMarker = path.join(WORKSPACE_DIR, '.seed-docs-v8');
   if (!fs.existsSync(docsMarker)) {
     const repoDocs: Array<{ id: string; title: string; relPath: string }> = [
       {
