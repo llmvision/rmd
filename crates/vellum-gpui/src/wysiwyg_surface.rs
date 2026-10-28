@@ -947,12 +947,12 @@ impl WysiwygEditorSurface {
         let show_syntax = if force_pure_preview {
             false
         } else {
-            match self.marker_visibility {
+            let marker_vis = match self.marker_visibility {
                 SyntaxMarkerVisibility::AlwaysVisible => true,
                 SyntaxMarkerVisibility::AlwaysHidden => false,
                 SyntaxMarkerVisibility::ActiveBlockOnly => is_active,
-            } || self.mode == EditorMode::SourceCode
-                || is_editing_structured
+            };
+            marker_vis || self.mode == EditorMode::SourceCode || is_editing_structured
         };
 
         let show_caret = is_active && (is_window_focused || self.selection_bytes.is_empty());
@@ -1583,7 +1583,9 @@ impl WysiwygEditorSurface {
                     }
                     grid.into_any_element()
                 } else {
-                    div().child(SharedString::from(raw_text)).into_any_element()
+                    div()
+                        .child(SharedString::from(raw_text.clone()))
+                        .into_any_element()
                 }
             }
 
@@ -2494,6 +2496,11 @@ impl Render for WysiwygEditorSurface {
             let ent_left = entity.clone();
             let ent_right = entity.clone();
             let block_count = self.doc.blocks().len();
+            let preview_rows: Vec<AnyElement> = (0..block_count)
+                .map(|b_ix| {
+                    self.render_block_row(b_ix, active_ix, false, true, theme, ent_right.clone())
+                })
+                .collect();
 
             div()
                 .size_full()
@@ -2543,19 +2550,7 @@ impl Render for WysiwygEditorSurface {
                         .pb_16()
                         .flex()
                         .flex_col()
-                        .children((0..block_count).map(move |b_ix| {
-                            let ent = ent_right.clone();
-                            ent.update(cx, |this, _cx| {
-                                this.render_block_row(
-                                    b_ix,
-                                    active_ix,
-                                    false,
-                                    true,
-                                    theme,
-                                    ent.clone(),
-                                )
-                            })
-                        })),
+                        .children(preview_rows),
                 )
                 .into_any_element()
         } else {
