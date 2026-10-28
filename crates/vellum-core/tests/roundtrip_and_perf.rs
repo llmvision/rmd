@@ -174,3 +174,31 @@ fn test_formal_pdf_export_generates_valid_pdf_header() {
         assert!(pdf_bytes.len() > 1024);
     }
 }
+
+#[test]
+fn test_eof_and_inter_block_blank_paragraph_indexing() {
+    // 1. Empty document still has 1 addressable Paragraph block
+    let empty_doc = RopeDocument::from_markdown_str("empty", "Empty", "");
+    assert_eq!(empty_doc.blocks().len(), 1);
+    assert_eq!(empty_doc.blocks()[0].byte_range, 0..0);
+
+    // 2. Single trailing newline (`# Title\n`) is 1 block (no phantom trailing block)
+    let single_nl = RopeDocument::from_markdown_str("s1", "Single", "# Title\n");
+    assert_eq!(single_nl.blocks().len(), 1);
+
+    // 3. Double trailing newline (`# Title\n\n`) exposes addressable EOF blank paragraph at `len..len`
+    let double_nl = RopeDocument::from_markdown_str("s2", "Double", "# Title\n\n");
+    assert_eq!(double_nl.blocks().len(), 2);
+    assert_eq!(
+        double_nl.blocks()[1].byte_range,
+        double_nl.len_bytes()..double_nl.len_bytes()
+    );
+
+    // 4. Standard paragraph separator (`a\n\nb`) has 2 blocks; intentional blank line (`a\n\n\n\nb`) has 3 blocks
+    let normal_two = RopeDocument::from_markdown_str("p2", "Two", "Para A\n\nPara B\n");
+    assert_eq!(normal_two.blocks().len(), 2);
+
+    let blank_mid = RopeDocument::from_markdown_str("p3", "Three", "Para A\n\n\n\nPara B\n");
+    assert_eq!(blank_mid.blocks().len(), 3);
+}
+

@@ -139,8 +139,7 @@ impl KanbanBoardView {
 
         self.editor.update(cx, |surface, cx| {
             if surface.doc.append_kanban_task(&label, completed).is_ok() {
-                let next_count = surface.doc.blocks().len().max(1);
-                surface.list_state.reset(next_count);
+                surface.refresh_list_state();
                 cx.notify();
             }
         });

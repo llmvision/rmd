@@ -76,11 +76,22 @@ impl RopeDocument {
             LineEnding::Lf
         };
 
-        let title = path_ref
+        let fallback_title = path_ref
             .file_stem()
             .and_then(|s| s.to_str())
             .unwrap_or("未命名文档")
             .to_string();
+
+        let h1_title = (0..rope.len_lines().min(12))
+            .map(|i| rope.line(i).to_string())
+            .find_map(|ln| {
+                let trimmed = ln.trim();
+                trimmed
+                    .strip_prefix("# ")
+                    .map(|rest| rest.trim().to_string())
+                    .filter(|s| !s.is_empty())
+            });
+        let title = h1_title.unwrap_or(fallback_title);
 
         let mut doc = Self {
             id: id.into(),
@@ -238,11 +249,19 @@ impl RopeDocument {
             + 1)
         .min(self.blocks.len());
 
-        let win_start = self.blocks[first_ix].byte_range.start;
+        let win_start = if first_ix == 0 {
+            0
+        } else {
+            self.blocks[first_ix].byte_range.start
+        };
         let old_win_end = self.blocks[last_ix - 1].byte_range.end;
-        let new_win_end = ((old_win_end as isize) + delta)
-            .max(win_start as isize)
-            .min(self.rope.len_bytes() as isize) as usize;
+        let new_win_end = if last_ix >= self.blocks.len() {
+            self.rope.len_bytes()
+        } else {
+            ((old_win_end as isize) + delta)
+                .max(win_start as isize)
+                .min(self.rope.len_bytes() as isize) as usize
+        };
 
         let cs = self.rope.byte_to_char(win_start);
         let ce = self.rope.byte_to_char(new_win_end);

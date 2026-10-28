@@ -398,7 +398,12 @@ server {
      ```toml
      rfd = { version = "0.15", default-features = false, features = ["xdg-portal", "async-std"] }
      ```
-7. **旧版源码包编译 `vellum-core` / `vellum-gpui` 遇到 `f32: Eq` (`VisibleBlockRange`) 或 `gpui 0.2.2` `window.focus` 参数不匹配**
-   - **原因**：`VisibleBlockRange` 包含 `f32` 像素高度字段，浮点数遵循 IEEE 754 `NaN != NaN` 仅实现 `PartialEq` 而不实现 `Eq`；此外 `gpui 0.2.2` 中 `Window::focus(&FocusHandle, &mut App)` 需要传入第二个上下文参数 `cx`，且 `.when()` / `.hover()` 需要引入 `FluentBuilder` 与 `StatefulInteractiveElement`。
+7. **旧版源码包编译 `vellum-core` / `vellum-gpui` 遇到 `f32: Eq` (`VisibleBlockRange`)、`cx.new` 未找到方法或 `window.focus` 参数不匹配**
+   - **原因**：`VisibleBlockRange` 包含 `f32` 像素高度字段，浮点数遵循 IEEE 754 `NaN != NaN` 仅实现 `PartialEq` 而不实现 `Eq`；此外在 `gpui 0.2.2` 中，创建视图实体的 `cx.new(...)` 定义在 `gpui::AppContext` trait 上（必须显式 `use gpui::AppContext;`），且 `Window::focus(&mut self, handle: &FocusHandle)` 仅接收单个 `&FocusHandle` 参数（不再接收额外的 `cx` 参数）。
    - **解决**：最新源码树与 `setup-vellum-rust-gpui.sh` 已全部修复，重新下载执行自解压脚本覆盖源码文件（不会清理 `target/` 缓存）后直接运行 `cargo build --release -p vellum-gpui` 即可。
-
+8. **Linux Wayland / WSLg / NVIDIA 独显环境下窗口内看不到鼠标指针**
+   - **原因**：`gpui 0.2.2` 在 Wayland 会话下通过 `wayland-cursor` 读取 `XCURSOR_THEME` 与 `XCURSOR_SIZE` 加载系统光标位图（`left_ptr` / `text`）；若终端未导出有效主题名或遇到部分 Wayland 合成器硬件光标层兼容缺陷，系统鼠标移入窗口后会隐藏。
+   - **解决**：最新版 `vellum` 启动时已在单线程阶段自动扫描 `/usr/share/icons` 注入有效的 `XCURSOR_THEME`（如 `Adwaita` / `Yaru` / `DMZ-White`）与 `XCURSOR_SIZE=24`；若在 WSLg 或特殊合成器下仍看不到系统鼠标，可任选以下三种兜底方案：
+     1. 在窗口内直接按快捷键 **`Ctrl + Alt + M`**（或点击底部状态栏右侧按钮），立即启用 **GPU 原生软件鼠标指针**；
+     2. 通过 XWayland 模式启动（绕过 Wayland 光标平面问题）：`VELLUM_FORCE_X11=1 ./target/release/vellum`；
+     3. 安装标准光标主题包：`sudo apt-get install -y adwaita-icon-theme dmz-cursor-theme`。
