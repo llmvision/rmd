@@ -14,7 +14,8 @@ mod workspace;
 mod wysiwyg_surface;
 
 use gpui::{
-    App, Application, Bounds, KeyBinding, TitlebarOptions, WindowBounds, WindowOptions, px, size,
+    App, AppContext, Application, Bounds, KeyBinding, TitlebarOptions, WindowBounds, WindowOptions,
+    px, size,
 };
 use std::{net::SocketAddr, path::PathBuf};
 use vellum_core::RopeDocument;

@@ -3,8 +3,8 @@ use crate::kanban_board::KanbanBoardView;
 use crate::theme::VellumTheme;
 use crate::wysiwyg_surface::{EditorMode, WysiwygEditorSurface};
 use gpui::{
-    App, Context, Entity, FocusHandle, Focusable, InteractiveElement, IntoElement, MouseButton,
-    ParentElement, Render, SharedString, StatefulInteractiveElement, Styled, Window, actions, div,
+    App, AppContext, Context, Entity, FocusHandle, Focusable, InteractiveElement, IntoElement,
+    MouseButton, ParentElement, Render, SharedString, Styled, Window, actions, div,
     prelude::FluentBuilder, px,
 };
 use std::path::PathBuf;

@@ -8,9 +8,9 @@
 use crate::theme::VellumTheme;
 use crate::wysiwyg_surface::WysiwygEditorSurface;
 use gpui::{
-    App, Context, Entity, FocusHandle, Focusable, FontWeight, InteractiveElement, IntoElement,
-    MouseButton, ParentElement, Render, SharedString, StatefulInteractiveElement, Styled, Window,
-    div, prelude::FluentBuilder, px, rgb, rgba,
+    App, AppContext, Context, Entity, FocusHandle, Focusable, FontWeight, InteractiveElement,
+    IntoElement, MouseButton, ParentElement, Render, SharedString, StatefulInteractiveElement,
+    Styled, Window, div, prelude::FluentBuilder, px, rgb, rgba,
 };
 use std::rc::Rc;
 use vellum_core::KanbanTaskCard;

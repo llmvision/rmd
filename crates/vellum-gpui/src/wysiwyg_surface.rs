@@ -5,9 +5,8 @@ use gpui::{
     AnyElement, App, Bounds, ClipboardItem, Context, ElementInputHandler, Entity,
     EntityInputHandler, FocusHandle, Focusable, FontStyle, FontWeight, HighlightStyle,
     InteractiveElement, IntoElement, ListAlignment, ListState, MouseButton, ParentElement, Pixels,
-    Point, Render, SharedString, StatefulInteractiveElement, StrikethroughStyle, Styled,
-    StyledText, UTF16Selection, UnderlineStyle, Window, canvas, div, list, prelude::FluentBuilder,
-    px,
+    Point, Render, SharedString, StrikethroughStyle, Styled, StyledText, UTF16Selection,
+    UnderlineStyle, Window, canvas, div, list, prelude::FluentBuilder, px,
 };
 use std::ops::Range;
 use vellum_core::{
@@ -478,7 +477,7 @@ impl WysiwygEditorSurface {
                 click_entity.update(cx, |this, cx| {
                     this.cursor_byte = click_byte;
                     this.selection_bytes = click_byte..click_byte;
-                    window.focus(&this.focus_handle, cx);
+                    window.focus(&this.focus_handle);
                     cx.notify();
                 });
             })
