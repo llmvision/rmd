@@ -962,7 +962,13 @@ async function startServer() {
   app.get('/api/v1/rust-source', async (_req: Request, res: Response) => {
     try {
       const rootFiles: Array<{ path: string; language: string; bytes: number; content: string }> = [];
-      for (const rootName of ['Cargo.toml', 'README.md', 'scripts/install-linux-deps.sh']) {
+      for (const rootName of [
+        'Cargo.toml',
+        'README.md',
+        'scripts/install-linux-deps.sh',
+        'deploy/Dockerfile',
+        'deploy/vellum-server.service',
+      ]) {
         const full = path.resolve(__dirname, rootName);
         if (fs.existsSync(full)) {
           const content = await fsp.readFile(full, 'utf8');
@@ -970,7 +976,7 @@ async function startServer() {
             path: rootName,
             language: rootName.endsWith('.toml')
               ? 'toml'
-              : rootName.endsWith('.sh')
+              : rootName.endsWith('.sh') || rootName.endsWith('Dockerfile') || rootName.endsWith('.service')
               ? 'bash'
               : 'markdown',
             bytes: Buffer.byteLength(content, 'utf8'),

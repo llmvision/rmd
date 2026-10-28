@@ -1,0 +1,19 @@
+[Unit]
+Description=Vellum Server — Rust Axum Markdown & Knowledge Graph Service
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/vellum
+ExecStart=/usr/local/bin/vellum-server
+Restart=on-failure
+RestartSec=3
+Environment=VELLUM_HOST=0.0.0.0
+Environment=VELLUM_PORT=4120
+Environment=VELLUM_WORKSPACE=/var/lib/vellum/workspace-docs
+Environment=RUST_LOG=vellum_server=info,tower_http=info
+
+[Install]
+WantedBy=multi-user.target

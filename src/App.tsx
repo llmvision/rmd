@@ -362,7 +362,10 @@ export default function App() {
       lines.push('');
     }
 
-    lines.push('echo "Done! Run: cd vellum-native && cargo run --release -p vellum-gpui"');
+    lines.push('chmod +x scripts/*.sh 2>/dev/null || true');
+    lines.push('echo "Done! Workspace extracted into ./vellum-native"');
+    lines.push('echo "  1) Desktop GPUI App : cd vellum-native && cargo build --release -p vellum-gpui"');
+    lines.push('echo "  2) Axum API Server  : cd vellum-native && cargo build --release -p vellum-server"');
 
     const blob = new Blob([lines.join('\n')], { type: 'text/x-shellscript;charset=utf-8' });
     const url = URL.createObjectURL(blob);
