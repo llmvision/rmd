@@ -392,3 +392,9 @@ server {
      ```bash
      cargo update -p libc --precise 0.2.189
      ```
+6. **Linux 编译 `vellum-gpui` 遇到 `ashpd-0.11.1/src/desktop/secret.rs: x2.shutdown().await?` 参数不匹配 (`E0061` / `E0277`)**
+   - **原因**：`gpui 0.2.2` 在 Linux 下基于 `smol / async-io` 运行时启用了 `ashpd/async-io`；若 `rfd` 同时开启了 `"tokio"` 特性，Cargo 特性合并会令 `ashpd 0.11` 同时激活互斥的 `tokio` 与 `async-io` 两个异步后端（导致 `async_net::unix::UnixStream` 被按 Tokio `AsyncWriteExt::shutdown()` 调用）。
+   - **解决**：根 `Cargo.toml` 中的 `rfd` 必须使用 `"async-std"`（映射为 `ashpd/async-io`）而非 `"tokio"`：
+     ```toml
+     rfd = { version = "0.15", default-features = false, features = ["xdg-portal", "async-std"] }
+     ```

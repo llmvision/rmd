@@ -163,24 +163,34 @@ impl VellumWorkspace {
             )
         };
         let endpoint = format!("{}/documents/{}", self.local_axum_url, doc_id);
+        let bg = cx.background_executor().clone();
 
         cx.spawn(async move |this, cx| {
-            if let Some(path) = file_path {
-                let tmp = path.with_extension("md.tmp");
-                if tokio::fs::write(&tmp, content.as_bytes()).await.is_ok() {
-                    let _ = tokio::fs::rename(&tmp, &path).await;
+            let content_for_disk = content.clone();
+            bg.spawn(async move {
+                if let Some(path) = file_path {
+                    let tmp = path.with_extension("md.tmp");
+                    if std::fs::write(&tmp, content_for_disk.as_bytes()).is_ok() {
+                        let _ = std::fs::rename(&tmp, &path);
+                    }
                 }
-            }
+            })
+            .await;
 
-            let client = reqwest::Client::new();
-            let _ = client
-                .put(&endpoint)
-                .json(&serde_json::json!({
-                    "title": title,
-                    "content": content,
-                }))
-                .send()
-                .await;
+            // Dispatch Tokio-based `reqwest` call onto the background Tokio runtime handle
+            if let Some(rt_handle) = crate::tokio_handle() {
+                rt_handle.spawn(async move {
+                    let client = reqwest::Client::new();
+                    let _ = client
+                        .put(&endpoint)
+                        .json(&serde_json::json!({
+                            "title": title,
+                            "content": content,
+                        }))
+                        .send()
+                        .await;
+                });
+            }
 
             let _ = this.update(cx, |ws, cx| {
                 ws.status_notice = "已原子保存至本地磁盘".to_string();
@@ -239,6 +249,7 @@ impl VellumWorkspace {
 
             if let Some(file_handle) = target {
                 let out_path: PathBuf = file_handle.path().to_path_buf();
+                let write_path = out_path.clone();
                 let opts = FormalPdfOptions {
                     preset,
                     paper_size: PaperSize::A4,
@@ -255,22 +266,22 @@ impl VellumWorkspace {
                     .spawn(async move {
                         let mut snap_doc = RopeDocument::from_markdown_str(&doc_id, &title, &content);
                         snap_doc.revision = revision;
-                        snap_doc.export_formal_pdf(&opts, None)
+                        let bytes = snap_doc.export_formal_pdf(&opts, None)?;
+                        std::fs::write(&write_path, &bytes)?;
+                        Ok::<usize, anyhow::Error>(bytes.len())
                     })
                     .await;
 
                 match rendered {
-                    Ok(pdf_bytes) => {
-                        if tokio::fs::write(&out_path, &pdf_bytes).await.is_ok() {
-                            let _ = this.update(cx, |ws, cx| {
-                                ws.status_notice = format!(
-                                    "已导出正式矢量 PDF ({:.1} KB) → {}",
-                                    pdf_bytes.len() as f64 / 1024.0,
-                                    out_path.display()
-                                );
-                                cx.notify();
-                            });
-                        }
+                    Ok(byte_len) => {
+                        let _ = this.update(cx, |ws, cx| {
+                            ws.status_notice = format!(
+                                "已导出正式矢量 PDF ({:.1} KB) → {}",
+                                byte_len as f64 / 1024.0,
+                                out_path.display()
+                            );
+                            cx.notify();
+                        });
                     }
                     Err(err) => {
                         let _ = this.update(cx, |ws, cx| {

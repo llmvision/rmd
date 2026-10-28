@@ -49,13 +49,24 @@ const DEFAULT_WELCOME_MD: &str = r#"# Vellum Native — 本地所见即所得 Ma
 - [ ] 原生 Wasm 插件权限沙箱体系
 "#;
 
+static TOKIO_RUNTIME_HANDLE: std::sync::OnceLock<tokio::runtime::Handle> =
+    std::sync::OnceLock::new();
+
+pub fn tokio_handle() -> Option<&'static tokio::runtime::Handle> {
+    TOKIO_RUNTIME_HANDLE.get()
+}
+
 fn spawn_background_axum_daemon(port: u16) {
+    let (ready_tx, ready_rx) = std::sync::mpsc::sync_channel(1);
     std::thread::spawn(move || {
         let rt = tokio::runtime::Builder::new_multi_thread()
             .worker_threads(2)
             .enable_all()
             .build()
             .expect("Failed to initialize background Tokio runtime for Axum");
+
+        let _ = TOKIO_RUNTIME_HANDLE.set(rt.handle().clone());
+        let _ = ready_tx.send(());
 
         rt.block_on(async move {
             let workspace_dir = std::env::var("VELLUM_WORKSPACE")
@@ -67,6 +78,7 @@ fn spawn_background_axum_daemon(port: u16) {
             }
         });
     });
+    let _ = ready_rx.recv_timeout(std::time::Duration::from_secs(2));
 }
 
 fn main() {

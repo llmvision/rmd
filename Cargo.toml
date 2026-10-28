@@ -44,8 +44,10 @@ gpui = "0.2.2"
 # Pin libc to 0.2.189: libc 0.2.190+ removed deprecated `libc::ENOATTR` on Linux,
 # which breaks transitive `gpui 0.2.2 -> async-tar -> xattr 0.2.3`
 libc = "=0.2.189"
-# Use pure-Rust XDG Desktop Portal on Linux (avoids libgtk-3-dev & GTK event-loop conflicts with GPUI)
-rfd = { version = "0.15", default-features = false, features = ["xdg-portal", "tokio"] }
+# Use pure-Rust XDG Desktop Portal on Linux with `async-std` (which maps to `ashpd/async-io`).
+# IMPORTANT: Do NOT enable `"tokio"` here — `gpui 0.2.2` already enables `ashpd/async-io`, and enabling
+# both `tokio` + `async-io` on `ashpd 0.11` causes E0061/E0277 in `ashpd/src/desktop/secret.rs`.
+rfd = { version = "0.15", default-features = false, features = ["xdg-portal", "async-std"] }
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
 
 [profile.dev]
