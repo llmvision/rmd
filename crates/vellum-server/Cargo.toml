@@ -1,0 +1,29 @@
+[package]
+name = "vellum-server"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+name = "vellum_server"
+path = "src/lib.rs"
+
+[[bin]]
+name = "vellum-server"
+path = "src/main.rs"
+
+[dependencies]
+vellum-core = { path = "../vellum-core" }
+tokio.workspace = true
+axum.workspace = true
+tower.workspace = true
+tower-http.workspace = true
+dashmap.workspace = true
+notify.workspace = true
+blake3.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+uuid.workspace = true
+anyhow.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true

@@ -1,0 +1,22 @@
+[package]
+name = "vellum-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[features]
+default = []
+# Reserved for Phase 2 multi-device CRDT collaboration (yrs) & real-time cloud backup
+crdt-sync = []
+
+[dependencies]
+ropey.workspace = true
+pulldown-cmark.workspace = true
+krilla.workspace = true
+blake3.workspace = true
+regex.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+uuid.workspace = true
+anyhow.workspace = true

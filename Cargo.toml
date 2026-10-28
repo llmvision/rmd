@@ -1,0 +1,65 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/vellum-core",
+    "crates/vellum-server",
+    "crates/vellum-gpui",
+]
+default-members = ["crates/vellum-gpui"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "Apache-2.0"
+authors = ["Vellum Native Team"]
+description = "High-performance local-first WYSIWYG Markdown editor built with Rust, GPUI, Ropey, and Axum"
+
+[workspace.dependencies]
+# Core Low-Memory Text & CommonMark/GFM Engine
+ropey = "1.6"
+pulldown-cmark = { version = "0.12", default-features = false, features = ["simd"] }
+syntect = { version = "5.2", default-features = false, features = ["default-fancy"] }
+krilla = "0.8.2"
+lru = "0.12"
+blake3 = "1.5"
+regex = "1.11"
+anyhow = "1.0"
+thiserror = "2.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+uuid = { version = "1.11", features = ["v4", "serde"] }
+
+# High-Performance Local & Sync-Ready Backend (Axum + Tokio)
+tokio = { version = "1.42", features = ["full"] }
+axum = { version = "0.8", features = ["multipart", "macros"] }
+tower = "0.5"
+tower-http = { version = "0.6", features = ["cors", "compression-br", "compression-gzip", "fs"] }
+dashmap = "6.1"
+notify = "7.0"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Native GPU-Accelerated Desktop UI (GPUI: Metal on macOS, Vulkan + Wayland/X11 on Linux, DX12 on Windows)
+gpui = "0.2.2"
+# Use pure-Rust XDG Desktop Portal on Linux (avoids libgtk-3-dev & GTK event-loop conflicts with GPUI)
+rfd = { version = "0.15", default-features = false, features = ["xdg-portal", "tokio"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+
+[profile.dev]
+opt-level = 1
+
+[profile.dev.package.ropey]
+opt-level = 3
+
+[profile.dev.package.pulldown-cmark]
+opt-level = 3
+
+[profile.dev.package.syntect]
+opt-level = 3
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+panic = "abort"
+strip = "symbols"

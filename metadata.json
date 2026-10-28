@@ -1,0 +1,6 @@
+{
+  "name": "Vellum — 高性能本地所见即所得 Markdown 编辑器",
+  "description": "基于 Rust (Axum + GPUI + Ropey) 架构设计的本地优先所见即所得 Markdown 编辑器，内置分块增量解析与虚拟化渲染引擎，流畅支持十万字级大文档低内存编辑。",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
