@@ -41,6 +41,9 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 # Native GPU-Accelerated Desktop UI (GPUI: Metal on macOS, Vulkan + Wayland/X11 on Linux, DX12 on Windows)
 gpui = "0.2.2"
+# Pin libc to 0.2.189: libc 0.2.190+ removed deprecated `libc::ENOATTR` on Linux,
+# which breaks transitive `gpui 0.2.2 -> async-tar -> xattr 0.2.3`
+libc = "=0.2.189"
 # Use pure-Rust XDG Desktop Portal on Linux (avoids libgtk-3-dev & GTK event-loop conflicts with GPUI)
 rfd = { version = "0.15", default-features = false, features = ["xdg-portal", "tokio"] }
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }

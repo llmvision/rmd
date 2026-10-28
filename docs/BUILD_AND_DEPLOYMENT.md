@@ -386,3 +386,9 @@ server {
    - 本项目使用纯 Rust `xdg-portal` D-Bus 接口唤起系统原生文件选择器，请确保桌面环境已安装 `xdg-desktop-portal` 及其对应后端（如 `xdg-desktop-portal-gtk` 或 `xdg-desktop-portal-kde`）。
 4. **最小化 Linux 容器导出 PDF 提示 `No system CJK TrueType/OpenType font found`**
    - 安装任意开源中文字体即可（例如 `apt-get install -y fonts-wqy-zenhei` 或 `fonts-noto-cjk`），无需重启编译。
+5. **Linux 编译 `vellum-gpui` 遇到 `xattr-0.2.3: cannot find value ENOATTR in crate ::libc`**
+   - **原因**：`gpui 0.2.2` 的间接依赖 `async-tar -> xattr 0.2.3` 引用了 `libc::ENOATTR`，而上游 `libc 0.2.190+` 在 Linux 平台正式移除了该已弃用常量（Linux 现统一使用 `ENODATA`）。
+   - **解决**：根 `Cargo.toml` 现已默认锁定 `libc = "=0.2.189"`；若在旧版解压目录中编译，直接在工程根目录执行一行命令锁定 `Cargo.lock` 即可立即编过：
+     ```bash
+     cargo update -p libc --precise 0.2.189
+     ```
