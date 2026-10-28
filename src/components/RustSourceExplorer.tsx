@@ -138,6 +138,37 @@ export const RustSourceExplorer: React.FC<RustSourceExplorerProps> = ({
         </div>
       </div>
 
+      {/* Built-in Documentation & Key Module Quick-Jump Bar */}
+      <div className="mb-5 flex flex-wrap items-center gap-2 rounded-xl border border-zinc-200/90 bg-white px-4 py-3 text-xs dark:border-zinc-800 dark:bg-[#111622]">
+        <span className="font-semibold text-zinc-500 dark:text-zinc-400">工程文档与核心模块直达：</span>
+        {[
+          ['docs/BUILD_AND_DEPLOYMENT.md', '编译与部署完整指南'],
+          ['docs/ARCHITECTURE_AND_API.md', '核心架构与 API 手册'],
+          ['README.md', 'README 总览'],
+          ['deploy/Dockerfile', 'Docker 部署镜像'],
+          ['deploy/docker-compose.yml', 'Docker Compose'],
+          ['crates/vellum-core/src/pdf_export.rs', '正式矢量 PDF 引擎'],
+        ]
+          .filter(([pathKey]) => files.some((f) => f.path === pathKey))
+          .map(([pathKey, label]) => {
+            const isSelected = currentFile?.path === pathKey;
+            return (
+              <button
+                key={pathKey}
+                type="button"
+                onClick={() => setSelectedPath(pathKey)}
+                className={`rounded-md border px-2.5 py-1 font-medium transition-colors whitespace-nowrap shrink-0 ${
+                  isSelected
+                    ? 'border-blue-600 bg-blue-600 text-white'
+                    : 'border-zinc-200 bg-zinc-50 text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-800/70 dark:text-zinc-200 dark:hover:bg-zinc-800'
+                }`}
+              >
+                {label}
+              </button>
+            );
+          })}
+      </div>
+
       {/* File Tree + Code Viewer */}
       <div className="grid grid-cols-1 overflow-hidden rounded-xl border border-zinc-200 bg-white lg:grid-cols-12 dark:border-zinc-800 dark:bg-[#111622]">
         <div className="border-b border-zinc-200 bg-zinc-50/70 p-3 lg:col-span-3 lg:border-b-0 lg:border-r dark:border-zinc-800 dark:bg-[#0E131E]">

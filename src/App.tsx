@@ -57,7 +57,7 @@ export default function App() {
 
   const [rustFiles, setRustFiles] = useState<RustWorkspaceFile[]>([]);
   const [focusedRustPath, setFocusedRustPath] = useState<string>(
-    'crates/vellum-core/src/pdf_export.rs'
+    'docs/BUILD_AND_DEPLOYMENT.md'
   );
   const [showExportModal, setShowExportModal] = useState(false);
   const [pendingJumpHeading, setPendingJumpHeading] = useState<string | null>(null);

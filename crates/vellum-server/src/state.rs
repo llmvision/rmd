@@ -22,9 +22,13 @@ pub struct ServerState {
     pub graph: RwLock<KnowledgeGraphIndex>,
 }
 
+const BUILTIN_BUILD_GUIDE_MD: &str = include_str!("../../../docs/BUILD_AND_DEPLOYMENT.md");
+const BUILTIN_ARCH_API_MD: &str = include_str!("../../../docs/ARCHITECTURE_AND_API.md");
+
 impl ServerState {
     /// Streams existing `.md` files in `workspace_dir` into low-memory `RopeDocument` sessions
     /// and populates the workspace-wide `KnowledgeGraphIndex`.
+    /// On a fresh empty workspace directory, seeds built-in engineering & deployment manuals.
     pub async fn load_from_disk(workspace_dir: PathBuf) -> Result<Self> {
         let documents = DashMap::new();
         let mut graph = KnowledgeGraphIndex::new();
@@ -45,6 +49,30 @@ impl ServerState {
                         graph.upsert_document(&doc);
                         documents.insert(id, Arc::new(RwLock::new(doc)));
                     }
+                }
+            }
+        }
+
+        if documents.is_empty() {
+            let builtin_docs = [
+                (
+                    "build-and-deployment",
+                    "本地编译与服务端部署完整指南",
+                    BUILTIN_BUILD_GUIDE_MD,
+                ),
+                (
+                    "architecture-and-api",
+                    "核心架构与 Axum RESTful API 手册",
+                    BUILTIN_ARCH_API_MD,
+                ),
+            ];
+            for (id, title, raw_md) in builtin_docs {
+                let dst = workspace_dir.join(format!("{}.md", id));
+                if fs::write(&dst, raw_md.as_bytes()).await.is_ok() {
+                    let mut doc = RopeDocument::from_markdown_str(id, title, raw_md);
+                    doc.file_path = Some(dst);
+                    graph.upsert_document(&doc);
+                    documents.insert(id.to_string(), Arc::new(RwLock::new(doc)));
                 }
             }
         }

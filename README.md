@@ -1,66 +1,73 @@
 # Vellum Native — 基于 Rust + GPUI + Axum 的高性能本地所见即所得 Markdown 编辑器
 
-参考《Markdown 所见即所得（WYSIWYG）编辑器 PRD V1.0》构建的本地优先原生桌面编辑器与同步就绪后端工程。全面支持 **Linux (Wayland / X11 + Vulkan)**、**macOS (Metal)** 与 **Windows (DirectX)** 原生编译运行。
+参考《Markdown 所见即所得（WYSIWYG）编辑器 PRD V1.0》构建的本地优先原生桌面编辑器与同步就绪后端工程。全面支持 **Linux (Wayland / X11 + Vulkan)**、**macOS (Metal)** 与 **Windows (DirectX 12)** 纯原生 GPU 编译运行（零 WebView、零 Electron、零 HTML DOM）。
 
-## 1. Workspace Crates 架构
+---
+
+## 1. 工程文档导航（源码内置完整手册）
+
+- **[`docs/BUILD_AND_DEPLOYMENT.md`](docs/BUILD_AND_DEPLOYMENT.md)** —— **本地编译、跨平台打包与服务端生产部署完整指南**
+  - 涵盖 Rust Edition 2024 环境配置、Linux/macOS/Windows 编译依赖、`vellum` 桌面端与 `vellum-server` 独立后端分别编译、`Vellum.app` / `.desktop` 封装、Docker Compose 容器化部署、`systemd` 守护进程与 Caddy/Nginx HTTPS 反向代理配置。
+- **[`docs/ARCHITECTURE_AND_API.md`](docs/ARCHITECTURE_AND_API.md)** —— **核心架构原理与 Axum RESTful API 技术参考手册**
+  - 涵盖 `ropey::Rope` 零拷贝缓冲、SIMD 增量块扫描、Fenwick 视口高度树、两段式输入规则撤销、`KnowledgeGraphIndex` 双向链接网络、原生拖拽看板单字节状态翻转、`krilla` 正式文档版式矢量 PDF 排版引擎及全部 `/api/v1/*` 接口契约。
+
+---
+
+## 2. Cargo Workspace 目录结构
 
 ```text
 .
-├── Cargo.toml                      # Rust Workspace 根配置 (Edition 2024, LTO Thin)
+├── Cargo.toml                        # Rust Workspace 根配置 (Edition 2024, Thin LTO, strip symbols)
+├── README.md                         # 项目总览与快速启动说明
+├── docs/
+│   ├── BUILD_AND_DEPLOYMENT.md       # 本地编译、跨平台打包与服务端部署完整手册
+│   └── ARCHITECTURE_AND_API.md       # 内核架构原理与 RESTful API 完整技术规范
 ├── scripts/
-│   └── install-linux-deps.sh       # Linux (Ubuntu/Debian/Fedora/Arch) 一键依赖安装脚本
+│   └── install-linux-deps.sh         # Linux (Ubuntu/Debian/Fedora/Arch) 桌面编译依赖一键安装脚本
+├── deploy/
+│   ├── Dockerfile                    # vellum-server 多阶段最小化容器构建配置（含中文字体）
+│   ├── docker-compose.yml            # vellum-server 容器编排与持久化卷配置
+│   └── vellum-server.service         # Linux systemd 生产守护进程单元文件
 └── crates/
-    ├── vellum-core/                # 低内存文档内核 (ropey::Rope + pulldown-cmark SIMD + Fenwick 高度树 + KnowledgeGraph 双链图索引 + Kanban 单字节状态修改器 + krilla 正式文档矢量 PDF 排版引擎)
-    ├── vellum-server/              # Axum 0.8 高性能 RESTful API 服务（含 /api/v1/graph、/kanban、/export-pdf 与双链重命名重构接口）
-    └── vellum-gpui/                # Zed GPUI 0.2 纯原生 GPU 加速桌面客户端（零 WebView/DOM，含即时渲染画布、原生拖拽 KanbanBoardView、知识图谱与一键正式 PDF 导出）
+    ├── vellum-core/                  # 低内存文档内核 (Ropey + SIMD AST + Fenwick 树 + 双链图 + 看板 + krilla 正式 PDF 引擎)
+    ├── vellum-server/                # Axum 0.8 独立后端服务（产出二进制：vellum-server，无 GUI 依赖）
+    └── vellum-gpui/                  # Zed GPUI 0.2.2 纯原生桌面客户端（产出二进制：vellum）
 ```
 
-## 2. Linux 下编译与运行指南
+---
 
-**完全支持 Linux 原生编译与运行！**  
-`gpui 0.2.2` 在 Linux 上通过 **Vulkan (Blade)** 进行 GPU 硬件加速渲染，同时原生支持 **Wayland** 与 **X11** 窗口协议；本项目已将文件对话框库 `rfd` 配置为纯 Rust 的 `xdg-portal` 后端（避免 `libgtk-3-dev` 编译冲突与 GTK 主线程死锁），并为窗口设置了标准 Wayland `app_id`（`dev.vellum.markdown`）。
+## 3. 三分钟快速编译与运行
 
-### 第一步：安装系统开发头文件与 Vulkan 驱动
-
-直接运行项目自带的一键脚本（自动识别 Ubuntu/Debian `apt`、Fedora `dnf`、Arch `pacman`）：
+### 3.1 环境准备（需 Rust >= 1.85.0）
 ```bash
+rustup update stable
+
+# 若在 Linux 桌面编译 vellum-gpui，先运行一键依赖脚本（macOS 仅需 xcode-select --install）：
 chmod +x scripts/install-linux-deps.sh
 ./scripts/install-linux-deps.sh
 ```
 
-<details>
-<summary>手动安装参考（Ubuntu / Debian 示例）</summary>
-
+### 3.2 运行内核单元测试
 ```bash
-sudo apt-get update && sudo apt-get install -y \
-    build-essential pkg-config libssl-dev \
-    libvulkan1 libvulkan-dev mesa-vulkan-drivers vulkan-tools \
-    libfontconfig1-dev libfreetype6-dev \
-    libxkbcommon-dev libxkbcommon-x11-dev \
-    libwayland-dev libx11-xcb-dev libxcursor-dev libxi-dev \
-    libxcb1-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev \
-    xdg-desktop-portal fonts-noto-cjk
+cargo test -p vellum-core
 ```
-</details>
 
-### 第二步：编译并运行
+### 3.3 编译并启动两个核心程序
 
-1. **运行内核单元测试（无需图形界面，无头 Linux 服务器亦可运行）**：
+1. **程序一：GPUI 原生桌面客户端（`vellum-gpui` -> 二进制 `target/release/vellum`）**
    ```bash
-   cargo test -p vellum-core
+   cargo build --release -p vellum-gpui
+   ./target/release/vellum
    ```
-2. **启动 GPUI 原生桌面编辑器（需桌面图形环境 Wayland 或 X11 + Vulkan）**：
+2. **程序二：Axum 独立无头后端服务（`vellum-server` -> 二进制 `target/release/vellum-server`）**
    ```bash
-   cargo run --release -p vellum-gpui
-   # 或直接流式打开超大本地 Markdown 文件：
-   cargo run --release -p vellum-gpui -- ./docs/large-100k.md
+   # 在无图形界面的 Linux 服务器上亦可直接编译运行，不会触发 gpui 编译：
+   cargo build --release -p vellum-server
+   VELLUM_HOST=0.0.0.0 VELLUM_PORT=4120 VELLUM_WORKSPACE=./workspace-docs ./target/release/vellum-server
    ```
-3. **在无头 Linux 服务器上独立运行 Axum 后端 API 服务**：
+3. **Docker Compose 一键部署服务端**
    ```bash
-   VELLUM_PORT=4120 VELLUM_WORKSPACE=./workspace-docs cargo run --release -p vellum-server
+   docker compose -f deploy/docker-compose.yml up -d --build
    ```
 
-### Linux 常见问题排查
-- **WSL2 / 虚拟机中运行**：请确保安装了 `mesa-vulkan-drivers`（WSL2 下支持 `dzn` DirectX12-over-Vulkan 或 `llvmpipe` 软光栅回退），可通过 `vulkaninfo --summary` 验证 Vulkan 设备是否就绪。
-- **中文输入法（Fcitx5 / IBus）**：Wayland 下推荐使用原生 `text-input-v3` 协议（GNOME / KDE Plasma / Hyprland 均内置支持）；X11 下确保环境变量 `XMODIFIERS=@im=fcitx`（或 `ibus`）已设置。
-- **编译链接速度优化（可选）**：Linux 下安装 `mold` 或 `lld` 后，大型 Rust GUI 增量编译链接速度可提升 3–5 倍。
+详细跨平台打包（macOS `.app`、Linux `.desktop`、Windows `.exe`）、`systemd` 生产配置、HTTPS 反向代理及排障方案请参阅 [`docs/BUILD_AND_DEPLOYMENT.md`](docs/BUILD_AND_DEPLOYMENT.md)。

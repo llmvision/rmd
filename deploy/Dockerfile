@@ -2,7 +2,8 @@
 FROM rust:1.85-bookworm AS builder
 
 WORKDIR /src
-COPY Cargo.toml ./
+COPY Cargo.toml README.md ./
+COPY docs ./docs
 COPY crates ./crates
 
 # Build only `vellum-server` + `vellum-core` (no X11/Wayland/Vulkan GUI headers required on headless servers!)

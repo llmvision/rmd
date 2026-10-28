@@ -1,0 +1,24 @@
+services:
+  vellum-server:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    image: vellum-server:0.1.0
+    container_name: vellum-server
+    restart: unless-stopped
+    ports:
+      - "4120:4120"
+    environment:
+      VELLUM_HOST: "0.0.0.0"
+      VELLUM_PORT: "4120"
+      VELLUM_WORKSPACE: "/data/workspace-docs"
+      RUST_LOG: "vellum_server=info,tower_http=info"
+    volumes:
+      - vellum_workspace_data:/data/workspace-docs
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+volumes:
+  vellum_workspace_data:

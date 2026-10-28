@@ -597,9 +597,84 @@ async function ensureWorkspaceInitialized(): Promise<void> {
     await saveManifest(manifest);
     await atomicWriteFile(kgMarker, 'ok');
   }
+
+  // Sync source-tree `docs/BUILD_AND_DEPLOYMENT.md` & `docs/ARCHITECTURE_AND_API.md` into workspace-docs
+  const docsMarker = path.join(WORKSPACE_DIR, '.seed-docs-v5');
+  if (!fs.existsSync(docsMarker)) {
+    const repoDocs: Array<{ id: string; title: string; relPath: string }> = [
+      {
+        id: 'build-and-deployment',
+        title: '本地编译与服务端部署完整指南',
+        relPath: 'docs/BUILD_AND_DEPLOYMENT.md',
+      },
+      {
+        id: 'architecture-and-api',
+        title: '核心架构与 Axum RESTful API 手册',
+        relPath: 'docs/ARCHITECTURE_AND_API.md',
+      },
+    ];
+
+    for (const docSpec of repoDocs) {
+      const fullDocPath = path.resolve(__dirname, docSpec.relPath);
+      if (fs.existsSync(fullDocPath)) {
+        const docContent = await fsp.readFile(fullDocPath, 'utf8');
+        await atomicWriteFile(path.join(WORKSPACE_DIR, `${docSpec.id}.md`), docContent);
+        const stats = computeStats(docContent);
+        const existingIdx = manifest.findIndex((m) => m.id === docSpec.id);
+        if (existingIdx >= 0) {
+          manifest[existingIdx] = {
+            ...manifest[existingIdx],
+            title: docSpec.title,
+            updatedAt: now,
+            stats,
+          };
+        } else {
+          manifest.unshift({
+            id: docSpec.id,
+            title: docSpec.title,
+            filename: `${docSpec.id}.md`,
+            revision: 1,
+            createdAt: now,
+            updatedAt: now,
+            stats,
+          });
+          const snap: SnapshotRecord[] = [
+            {
+              snapshotId: crypto.randomUUID(),
+              createdAt: now,
+              label: '源码内置工程文档 #1',
+              revision: 1,
+              stats,
+              content: docContent,
+            },
+          ];
+          await atomicWriteFile(
+            path.join(SNAPSHOTS_DIR, `${docSpec.id}.json`),
+            JSON.stringify(snap)
+          );
+        }
+      }
+    }
+
+    await saveManifest(manifest);
+    await atomicWriteFile(docsMarker, 'ok');
+  }
 }
 
-async function collectRustWorkspaceFiles(dir: string, prefix = ''): Promise<Array<{ path: string; language: string; bytes: number; content: string }>> {
+function detectSourceLanguage(filename: string): string {
+  if (filename.endsWith('.rs')) return 'rust';
+  if (filename.endsWith('.toml')) return 'toml';
+  if (filename.endsWith('.yml') || filename.endsWith('.yaml')) return 'yaml';
+  if (filename.endsWith('.sh') || filename === 'Dockerfile' || filename.endsWith('.service')) {
+    return 'bash';
+  }
+  return 'markdown';
+}
+
+async function collectRustWorkspaceFiles(
+  dir: string,
+  prefix = ''
+): Promise<Array<{ path: string; language: string; bytes: number; content: string }>> {
   const results: Array<{ path: string; language: string; bytes: number; content: string }> = [];
   if (!fs.existsSync(dir)) return results;
   const entries = await fsp.readdir(dir, { withFileTypes: true });
@@ -612,10 +687,9 @@ async function collectRustWorkspaceFiles(dir: string, prefix = ''): Promise<Arra
       results.push(...sub);
     } else {
       const content = await fsp.readFile(full, 'utf8');
-      const language = entry.name.endsWith('.toml') ? 'toml' : entry.name.endsWith('.rs') ? 'rust' : 'markdown';
       results.push({
         path: rel,
-        language,
+        language: detectSourceLanguage(entry.name),
         bytes: Buffer.byteLength(content, 'utf8'),
         content,
       });
@@ -958,36 +1032,35 @@ async function startServer() {
     }
   });
 
-  // GET /api/v1/rust-source (Inspect root Rust Cargo workspace: Cargo.toml, README.md, crates/**)
+  // GET /api/v1/rust-source (Inspect root Rust Cargo workspace: Cargo.toml, README.md, docs/**, scripts/**, deploy/**, crates/**)
   app.get('/api/v1/rust-source', async (_req: Request, res: Response) => {
     try {
       const rootFiles: Array<{ path: string; language: string; bytes: number; content: string }> = [];
-      for (const rootName of [
-        'Cargo.toml',
-        'README.md',
-        'scripts/install-linux-deps.sh',
-        'deploy/Dockerfile',
-        'deploy/vellum-server.service',
-      ]) {
+      for (const rootName of ['Cargo.toml', 'README.md']) {
         const full = path.resolve(__dirname, rootName);
         if (fs.existsSync(full)) {
           const content = await fsp.readFile(full, 'utf8');
           rootFiles.push({
             path: rootName,
-            language: rootName.endsWith('.toml')
-              ? 'toml'
-              : rootName.endsWith('.sh') || rootName.endsWith('Dockerfile') || rootName.endsWith('.service')
-              ? 'bash'
-              : 'markdown',
+            language: detectSourceLanguage(rootName),
             bytes: Buffer.byteLength(content, 'utf8'),
             content,
           });
         }
       }
+      const docsFiles = await collectRustWorkspaceFiles(path.resolve(__dirname, 'docs'), 'docs');
+      const scriptsFiles = await collectRustWorkspaceFiles(
+        path.resolve(__dirname, 'scripts'),
+        'scripts'
+      );
+      const deployFiles = await collectRustWorkspaceFiles(
+        path.resolve(__dirname, 'deploy'),
+        'deploy'
+      );
       const crateFiles = await collectRustWorkspaceFiles(CRATES_DIR, 'crates');
       res.json({
         workspaceRoot: 'vellum-native',
-        files: [...rootFiles, ...crateFiles],
+        files: [...rootFiles, ...docsFiles, ...scriptsFiles, ...deployFiles, ...crateFiles],
       });
     } catch (err) {
       res.status(500).json({ error: String(err) });
